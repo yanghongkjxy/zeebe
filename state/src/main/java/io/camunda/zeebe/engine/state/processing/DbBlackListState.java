@@ -14,10 +14,12 @@ import io.camunda.zeebe.db.impl.DbLong;
 import io.camunda.zeebe.db.impl.DbNil;
 import io.camunda.zeebe.engine.Loggers;
 import io.camunda.zeebe.engine.metrics.BlacklistMetrics;
-import io.camunda.zeebe.engine.processing.streamprocessor.TypedRecord;
 import io.camunda.zeebe.engine.state.ZbColumnFamilies;
 import io.camunda.zeebe.engine.state.mutable.MutableBlackListState;
 import io.camunda.zeebe.msgpack.UnpackedObject;
+import io.camunda.zeebe.protocol.impl.record.UnifiedRecordValue;
+import io.camunda.zeebe.protocol.record.Record;
+import io.camunda.zeebe.protocol.record.RecordValue;
 import io.camunda.zeebe.protocol.record.intent.Intent;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceRelatedIntent;
 import io.camunda.zeebe.protocol.record.value.ProcessInstanceRelated;
@@ -46,6 +48,26 @@ public final class DbBlackListState implements MutableBlackListState {
     blacklistMetrics = new BlacklistMetrics(partitionId);
   }
 
+  @Override
+  <T extends UnifiedRecordValue> boolean tryToBlacklist(
+      final Record<T> typedRecord, final Consumer<Long> onBlacklistingInstance) {
+    final Intent intent = typedRecord.getIntent();
+    if (shouldBeBlacklisted(intent)) {
+      final UnpackedObject value = typedRecord.getValue();
+      if (value instanceof ProcessInstanceRelated) {
+        final long processInstanceKey = ((ProcessInstanceRelated) value).getProcessInstanceKey();
+        blacklist(processInstanceKey);
+        onBlacklistingInstance.accept(processInstanceKey);
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public void blacklistProcessInstance(final long processInstanceKey) {
+    blacklist(processInstanceKey);
+  }
+
   private void blacklist(final long key) {
     if (key >= 0) {
       LOG.warn(BLACKLIST_INSTANCE_MESSAGE, key);
@@ -62,8 +84,8 @@ public final class DbBlackListState implements MutableBlackListState {
   }
 
   @Override
-  public boolean isOnBlacklist(final TypedRecord record) {
-    final UnpackedObject value = record.getValue();
+  public boolean isOnBlacklist(final Record record) {
+    final RecordValue value = record.getValue();
     if (value instanceof ProcessInstanceRelated) {
       final long processInstanceKey = ((ProcessInstanceRelated) value).getProcessInstanceKey();
       if (processInstanceKey >= 0) {
@@ -71,26 +93,6 @@ public final class DbBlackListState implements MutableBlackListState {
       }
     }
     return false;
-  }
-
-  @Override
-  public boolean tryToBlacklist(
-      final TypedRecord<?> typedRecord, final Consumer<Long> onBlacklistingInstance) {
-    final Intent intent = typedRecord.getIntent();
-    if (shouldBeBlacklisted(intent)) {
-      final UnpackedObject value = typedRecord.getValue();
-      if (value instanceof ProcessInstanceRelated) {
-        final long processInstanceKey = ((ProcessInstanceRelated) value).getProcessInstanceKey();
-        blacklist(processInstanceKey);
-        onBlacklistingInstance.accept(processInstanceKey);
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public void blacklistProcessInstance(final long processInstanceKey) {
-    blacklist(processInstanceKey);
   }
 
   private boolean shouldBeBlacklisted(final Intent intent) {

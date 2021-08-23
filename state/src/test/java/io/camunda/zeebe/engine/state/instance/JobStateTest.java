@@ -11,7 +11,6 @@ import static io.camunda.zeebe.util.buffer.BufferUtil.wrapString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.camunda.zeebe.engine.state.immutable.JobState;
 import io.camunda.zeebe.engine.state.immutable.JobState.State;
 import io.camunda.zeebe.engine.state.mutable.MutableJobState;
 import io.camunda.zeebe.engine.state.mutable.MutableZeebeState;
@@ -594,7 +593,7 @@ public final class JobStateTest {
     return jobRecord;
   }
 
-  private void assertJobState(final long key, final JobState.State state) {
+  private void assertJobState(final long key, final State state) {
     final List<State> others =
         Arrays.stream(State.values()).filter(s -> s != state).collect(Collectors.toList());
 
