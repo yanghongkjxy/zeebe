@@ -10,6 +10,8 @@ package io.camunda.zeebe.gateway;
 import io.atomix.cluster.ClusterMembershipService;
 import io.atomix.cluster.messaging.ClusterEventService;
 import io.atomix.cluster.messaging.MessagingService;
+import io.camunda.zeebe.gateway.health.GatewayHealthManager;
+import io.camunda.zeebe.gateway.health.Status;
 import io.camunda.zeebe.gateway.impl.broker.BrokerClient;
 import io.camunda.zeebe.gateway.impl.broker.BrokerClientImpl;
 import io.camunda.zeebe.gateway.impl.configuration.GatewayCfg;
@@ -24,15 +26,15 @@ import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
-import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.netty.NettyServerBuilder;
-import io.grpc.protobuf.services.HealthStatusManager;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import me.dinowernli.grpc.prometheus.Configuration;
 import me.dinowernli.grpc.prometheus.MonitoringServerInterceptor;
 import org.slf4j.Logger;
@@ -42,16 +44,14 @@ public final class Gateway {
   private static final Function<GatewayCfg, ServerBuilder> DEFAULT_SERVER_BUILDER_FACTORY =
       cfg -> setNetworkConfig(cfg.getNetwork());
 
-  private final HealthStatusManager healthStatusManager = new HealthStatusManager();
   private final Function<GatewayCfg, ServerBuilder> serverBuilderFactory;
   private final Function<GatewayCfg, BrokerClient> brokerClientFactory;
   private final GatewayCfg gatewayCfg;
   private final ActorSchedulingService actorSchedulingService;
+  private final GatewayHealthManager healthManager;
 
   private Server server;
   private BrokerClient brokerClient;
-
-  private volatile Status status;
 
   public Gateway(
       final GatewayCfg gatewayCfg,
@@ -82,7 +82,8 @@ public final class Gateway {
     this.brokerClientFactory = brokerClientFactory;
     this.serverBuilderFactory = serverBuilderFactory;
     this.actorSchedulingService = actorSchedulingService;
-    this.setStatus(Status.INITIAL);
+
+    this.healthManager = new GatewayHealthManager();
   }
 
   public GatewayCfg getGatewayCfg() {
@@ -90,28 +91,7 @@ public final class Gateway {
   }
 
   public Status getStatus() {
-    return status;
-  }
-
-  public void setStatus(final Status status) {
-    this.status = status;
-    updateGrpcHealthStatus(status);
-  }
-
-  private void updateGrpcHealthStatus(final Status status) {
-    if (status == Status.INITIAL || status == Status.STARTING) {
-      setGrpcHealthStatus(ServingStatus.NOT_SERVING);
-    } else if (status == Status.SHUTDOWN) {
-      healthStatusManager.clearStatus(GatewayGrpc.SERVICE_NAME);
-      healthStatusManager.clearStatus(HealthStatusManager.SERVICE_NAME_ALL_SERVICES);
-    } else if (status == Status.RUNNING) {
-      setGrpcHealthStatus(ServingStatus.SERVING);
-    }
-  }
-
-  private void setGrpcHealthStatus(final ServingStatus servingStatus) {
-    healthStatusManager.setStatus(GatewayGrpc.SERVICE_NAME, servingStatus);
-    healthStatusManager.setStatus(HealthStatusManager.SERVICE_NAME_ALL_SERVICES, servingStatus);
+    return healthManager.getStatus();
   }
 
   public BrokerClient getBrokerClient() {
@@ -119,7 +99,7 @@ public final class Gateway {
   }
 
   public void start() throws IOException {
-    setStatus(Status.STARTING);
+    healthManager.setStatus(Status.STARTING);
     brokerClient = buildBrokerClient();
 
     final ActivateJobsHandler activateJobsHandler;
@@ -132,35 +112,33 @@ public final class Gateway {
       activateJobsHandler = new RoundRobinActivateJobsHandler(brokerClient);
     }
 
-    final EndpointManager endpointManager = new EndpointManager(brokerClient, activateJobsHandler);
-    final GatewayGrpcService gatewayGrpcService = new GatewayGrpcService(endpointManager);
+    final var endpointManager = new EndpointManager(brokerClient, activateJobsHandler);
+    final var gatewayGrpcService = new GatewayGrpcService(endpointManager);
     final ServerBuilder<?> serverBuilder = serverBuilderFactory.apply(gatewayCfg);
-
-    final BindableService healthService = healthStatusManager.getHealthService();
-    if (gatewayCfg.getMonitoring().isEnabled()) {
-      final MonitoringServerInterceptor monitoringInterceptor =
-          MonitoringServerInterceptor.create(Configuration.allMetrics());
-      serverBuilder.addService(
-          ServerInterceptors.intercept(gatewayGrpcService, monitoringInterceptor));
-      serverBuilder.addService(ServerInterceptors.intercept(healthService, monitoringInterceptor));
-    } else {
-      serverBuilder.addService(gatewayGrpcService);
-      serverBuilder.addService(healthService);
-    }
-
-    final SecurityCfg securityCfg = gatewayCfg.getSecurity();
+    final var securityCfg = gatewayCfg.getSecurity();
     if (securityCfg.isEnabled()) {
       setSecurityConfig(serverBuilder, securityCfg);
     }
 
-    server = serverBuilder.build();
+    Stream<ServerServiceDefinition> services =
+        Stream.of(gatewayGrpcService, healthManager.getHealthService())
+            .map(BindableService::bindService);
+    if (gatewayCfg.getMonitoring().isEnabled()) {
+      final var monitoringInterceptor =
+          MonitoringServerInterceptor.create(Configuration.allMetrics());
 
+      services =
+          services.map(service -> ServerInterceptors.intercept(service, monitoringInterceptor));
+    }
+
+    healthManager.addService(GatewayGrpc.SERVICE_NAME);
+    server = serverBuilder.addServices(services.collect(Collectors.toList())).build();
     server.start();
-    setStatus(Status.RUNNING);
+    healthManager.setStatus(Status.RUNNING);
   }
 
   private static NettyServerBuilder setNetworkConfig(final NetworkCfg cfg) {
-    final Duration minKeepAliveInterval = cfg.getMinKeepAliveInterval();
+    final var minKeepAliveInterval = cfg.getMinKeepAliveInterval();
 
     if (minKeepAliveInterval.isNegative() || minKeepAliveInterval.isZero()) {
       throw new IllegalArgumentException("Minimum keep alive interval must be positive.");
@@ -212,13 +190,9 @@ public final class Gateway {
     return LongPollingActivateJobsHandler.newBuilder().setBrokerClient(brokerClient).build();
   }
 
-  public void listenAndServe() throws InterruptedException, IOException {
-    start();
-    server.awaitTermination();
-  }
-
   public void stop() {
-    setStatus(Status.SHUTDOWN);
+    healthManager.setStatus(Status.SHUTDOWN);
+
     if (server != null && !server.isShutdown()) {
       server.shutdownNow();
       try {
@@ -235,12 +209,5 @@ public final class Gateway {
       brokerClient.close();
       brokerClient = null;
     }
-  }
-
-  public enum Status {
-    INITIAL,
-    STARTING,
-    RUNNING,
-    SHUTDOWN
   }
 }

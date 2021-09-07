@@ -8,18 +8,20 @@
 package io.camunda.zeebe.it.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
+import io.camunda.zeebe.gateway.protocol.GatewayGrpc;
 import io.camunda.zeebe.test.util.testcontainers.ZeebeTestContainerDefaults;
+import io.grpc.ManagedChannel;
+import io.grpc.health.v1.HealthCheckRequest;
+import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
+import io.grpc.health.v1.HealthGrpc;
+import io.grpc.netty.NettyChannelBuilder;
+import io.grpc.protobuf.services.HealthStatusManager;
 import io.zeebe.containers.ZeebeGatewayContainer;
-import io.zeebe.containers.ZeebePort;
-import java.io.IOException;
-import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.Container.ExecResult;
-import org.testcontainers.containers.GenericContainer;
+import java.util.Optional;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.AbstractWaitStrategy;
-import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -34,44 +36,22 @@ class GatewayGrpcHealthIntegrationTest {
           .withoutTopologyCheck()
           .withNetwork(network);
 
-  private final GenericContainer<?> grpcHealthProbeContainer =
-      new GenericContainer<>(
-              new ImageFromDockerfile()
-                  .withDockerfileFromBuilder(
-                      builder ->
-                          builder
-                              .from("alpine:3.14")
-                              .run(
-                                  "set -ex "
-                                      + "    && apk add --no-cache curl "
-                                      + "    && curl -fSL https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.5/grpc_health_probe-linux-amd64 -o grpc_health_probe "
-                                      + "    && chmod +x grpc_health_probe")
-                              .entryPoint("while true; do date; sleep 5; done")
-                              .build()))
-          .waitingFor(
-              new AbstractWaitStrategy() {
-                @Override
-                protected void waitUntilReady() {
-                  await()
-                      .until(
-                          () ->
-                              waitStrategyTarget.getCurrentContainerInfo().getState().getRunning());
-                }
-              })
-          .dependsOn(zeebeGatewayContainer)
-          .withNetwork(network);
+  @ParameterizedTest
+  @ValueSource(strings = {GatewayGrpc.SERVICE_NAME, HealthStatusManager.SERVICE_NAME_ALL_SERVICES})
+  void shouldReturnServingWhenGatewayIsStarted(final String serviceName) {
+    ManagedChannel channel = null;
 
-  @Test
-  void shouldReturnServingWhenGatewayIsStarted() throws IOException, InterruptedException {
-    try (grpcHealthProbeContainer) {
-      grpcHealthProbeContainer.start();
-      final ExecResult execResult =
-          grpcHealthProbeContainer.execInContainer(
-              "./grpc_health_probe",
-              "--addr",
-              zeebeGatewayContainer.getInternalAddress(ZeebePort.GATEWAY.getPort()));
-      assertThat(execResult.getExitCode()).isEqualTo(0);
-      assertThat(execResult.getStderr()).contains("status: SERVING");
+    try {
+      channel =
+          NettyChannelBuilder.forTarget(zeebeGatewayContainer.getExternalGatewayAddress())
+              .usePlaintext()
+              .build();
+      final var client = HealthGrpc.newBlockingStub(channel);
+      final var response =
+          client.check(HealthCheckRequest.newBuilder().setService(serviceName).build());
+      assertThat(response.getStatus()).isEqualTo(ServingStatus.SERVING);
+    } finally {
+      Optional.ofNullable(channel).ifPresent(ManagedChannel::shutdownNow);
     }
   }
 }

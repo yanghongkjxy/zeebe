@@ -12,6 +12,7 @@ import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
 import io.atomix.cluster.protocol.GroupMembershipProtocol;
 import io.atomix.cluster.protocol.SwimMembershipProtocol;
 import io.atomix.utils.net.Address;
+import io.camunda.zeebe.gateway.health.GatewayHealthManager;
 import io.camunda.zeebe.gateway.impl.SpringGatewayBridge;
 import io.camunda.zeebe.gateway.impl.broker.BrokerClient;
 import io.camunda.zeebe.gateway.impl.broker.BrokerClientImpl;
@@ -68,6 +69,7 @@ public class StandaloneGateway
       LOG.info("Starting standalone gateway with configuration {}", configuration.toJson());
     }
 
+    final var healthManager = new GatewayHealthManager();
     atomixCluster = createAtomixCluster(configuration.getCluster());
     actorScheduler = createActorScheduler(configuration);
     gateway = new Gateway(configuration, this::createBrokerClient, actorScheduler);

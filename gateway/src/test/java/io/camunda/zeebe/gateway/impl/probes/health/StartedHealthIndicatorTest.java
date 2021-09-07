@@ -10,7 +10,7 @@ package io.camunda.zeebe.gateway.impl.probes.health;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.camunda.zeebe.gateway.Gateway.Status;
+import io.camunda.zeebe.gateway.health.Status;
 import java.util.Optional;
 import org.junit.Test;
 import org.springframework.boot.actuate.health.Health;
@@ -26,8 +26,7 @@ public class StartedHealthIndicatorTest {
   @Test
   public void shouldReportUnknownWhenGatewayStateIsEmpty() {
     // given
-    final StartedHealthIndicator sutHealthIndicator =
-        new StartedHealthIndicator(() -> Optional.empty());
+    final StartedHealthIndicator sutHealthIndicator = new StartedHealthIndicator(Optional::empty);
 
     // when
     final Health actual = sutHealthIndicator.health();
