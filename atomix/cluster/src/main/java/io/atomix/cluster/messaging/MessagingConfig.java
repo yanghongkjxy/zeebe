@@ -106,7 +106,8 @@ public class MessagingConfig implements Config {
    * @param shutdownTimeout the time to wait for an orderly shutdown of the messaging service
    * @return this config
    */
-  public void setShutdownTimeout(final Duration shutdownTimeout) {
+  public MessagingConfig setShutdownTimeout(final Duration shutdownTimeout) {
     this.shutdownTimeout = shutdownTimeout;
+    return this;
   }
 }
