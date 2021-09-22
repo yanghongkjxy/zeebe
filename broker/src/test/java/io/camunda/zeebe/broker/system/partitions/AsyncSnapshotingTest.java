@@ -119,7 +119,7 @@ public final class AsyncSnapshotingTest {
 
     // then
     Awaitility.await()
-        .untilAsserted(() -> assertThat(snapshotController.getValidSnapshotsCount()).isEqualTo(1));
+        .untilAsserted(() -> assertThat(snapshot.getValidSnapshotsCount()).isEqualTo(1));
   }
 
   @Test

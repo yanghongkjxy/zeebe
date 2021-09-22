@@ -15,33 +15,23 @@ import java.util.Optional;
 public interface StateController extends AutoCloseable {
   /**
    * Takes a snapshot based on the given position. The position is a last processed lower bound
-   * event position.
+   * event position. When the returned future completes successfully, the transient snapshot will be
+   * valid.
    *
    * @param lowerBoundSnapshotPosition the lower bound snapshot position
-   * @return a pending snapshot, or nothing if the operation fails
+   * @return a future
    */
-  Optional<TransientSnapshot> takeTransientSnapshot(long lowerBoundSnapshotPosition);
+  ActorFuture<Optional<TransientSnapshot>> takeTransientSnapshot(long lowerBoundSnapshotPosition);
 
-  /**
-   * Recovers the state from the latest snapshot.
-   *
-   * @return
-   */
-  ActorFuture<Void> recover();
+  /** Recovers the state from the latest snapshot. */
+  ActorFuture<Void> recover() throws Exception;
 
   /**
    * Opens the database from the latest snapshot.
    *
    * @return an opened database
    */
-  ZeebeDb openDb();
+  ActorFuture<ZeebeDb> openDb();
 
-  void closeDb() throws Exception;
-
-  /**
-   * Returns the current number of valid snapshots.
-   *
-   * @return valid snapshots count
-   */
-  int getValidSnapshotsCount();
+  ActorFuture<Void> closeDb() throws Exception;
 }
