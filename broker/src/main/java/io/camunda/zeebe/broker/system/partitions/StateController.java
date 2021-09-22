@@ -23,15 +23,12 @@ public interface StateController extends AutoCloseable {
    */
   ActorFuture<Optional<TransientSnapshot>> takeTransientSnapshot(long lowerBoundSnapshotPosition);
 
-  /** Recovers the state from the latest snapshot. */
-  ActorFuture<Void> recover() throws Exception;
-
   /**
-   * Opens the database from the latest snapshot.
+   * Recovers the state from the snapshot and opens the database
    *
-   * @return an opened database
+   * @return ZeebeDb the database which is recovered from the snapshot.
    */
-  ActorFuture<ZeebeDb> openDb();
+  ActorFuture<ZeebeDb> recover();
 
   ActorFuture<Void> closeDb() throws Exception;
 }

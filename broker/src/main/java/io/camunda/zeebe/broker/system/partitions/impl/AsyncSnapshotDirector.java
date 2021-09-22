@@ -226,13 +226,18 @@ public final class AsyncSnapshotDirector extends Actor
         stateController.takeTransientSnapshot(lowerBoundSnapshotPosition);
 
     transientSnapshotFuture.onComplete(
-        (transientSnapshot, snapshotTakenError) -> {
+        (optionalTransientSnapshot, snapshotTakenError) -> {
           if (snapshotTakenError != null) {
             LOG.error("Could not take a snapshot for {}", processorName, snapshotTakenError);
             resetStateOnFailure();
             return;
           }
-          pendingSnapshot = transientSnapshot;
+
+          if (optionalTransientSnapshot.isEmpty()) {
+            takingSnapshot = false;
+            return;
+          }
+          pendingSnapshot = optionalTransientSnapshot.get();
           onRecovered();
 
           final ActorFuture<Long> lastWrittenPosition =

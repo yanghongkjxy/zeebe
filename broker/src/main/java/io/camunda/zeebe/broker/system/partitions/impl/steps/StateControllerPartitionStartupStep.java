@@ -38,7 +38,8 @@ public class StateControllerPartitionStartupStep implements PartitionStartupStep
             runtimeDirectory,
             new AtomixRecordEntrySupplierImpl(
                 partitionStartupContext.getRaftPartition().getServer()),
-            StatePositionSupplier::getHighestExportedPosition);
+            StatePositionSupplier::getHighestExportedPosition,
+            null); // TODO
 
     partitionStartupContext.setStateController(stateController);
     return CompletableActorFuture.completed(partitionStartupContext);
