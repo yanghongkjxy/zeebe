@@ -28,7 +28,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-class GatewayGrpcHealthIntegrationTest {
+class GatewayGrpcHealthIT {
 
   @Container
   private final ZeebeGatewayContainer zeebeGatewayContainer =
