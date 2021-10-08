@@ -103,7 +103,7 @@ public class FileBasedSnapshotStoreTest {
   public void shouldNotLoadCorruptedSnapshot() throws Exception {
     // given
     final var persistedSnapshot = (FileBasedSnapshot) takeTransientSnapshot().persist().join();
-    SnapshotChecksum.persist(persistedSnapshot.getChecksumFile(), 0xCAFEL);
+    SnapshotChecksum.persist(persistedSnapshot.getChecksumFile(), new SfvChecksum(0xCAFEL));
 
     // when
     snapshotStore.close();
