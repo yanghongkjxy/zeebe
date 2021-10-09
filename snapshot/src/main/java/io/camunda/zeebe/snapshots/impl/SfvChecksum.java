@@ -11,7 +11,6 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -161,9 +160,5 @@ final class SfvChecksum {
       return new UnsupportedOperationException("This is an immutable checksum.");
     }
 
-    @Override
-    public int hashCode() {
-      return Objects.hash(crc);
-    }
   }
 }
