@@ -7,8 +7,9 @@
  */
 package io.camunda.zeebe.broker.bootstrap;
 
+import io.atomix.cluster.messaging.ManagedMessagingService;
 import io.atomix.cluster.messaging.MessagingConfig;
-import io.atomix.cluster.messaging.impl.NettyMessagingService;
+import io.atomix.cluster.messaging.grpc.GrpcMessagingFactory;
 import io.atomix.utils.net.Address;
 import io.camunda.zeebe.broker.Loggers;
 import io.camunda.zeebe.broker.transport.backpressure.PartitionAwareRequestLimiter;
@@ -41,11 +42,13 @@ final class CommandApiServiceStep extends AbstractBrokerStartupStep {
     final var messagingConfig = new MessagingConfig();
     messagingConfig.setInterfaces(List.of(socketCfg.getHost()));
     messagingConfig.setPort(socketCfg.getPort());
-    final var messagingService =
-        new NettyMessagingService(
-            brokerCfg.getCluster().getClusterName(),
-            Address.from(socketCfg.getAdvertisedHost(), socketCfg.getAdvertisedPort()),
-            messagingConfig);
+    final ManagedMessagingService messagingService =
+        GrpcMessagingFactory.create(
+                messagingConfig,
+                Address.from(socketCfg.getAdvertisedHost(), socketCfg.getAdvertisedPort()),
+                brokerCfg.getCluster().getClusterName(),
+                "commandApi")
+            .getMessagingService();
 
     messagingService
         .start()
@@ -98,7 +101,7 @@ final class CommandApiServiceStep extends AbstractBrokerStartupStep {
   private void completeStartup(
       final BrokerStartupContext brokerStartupContext,
       final ActorFuture<BrokerStartupContext> startupFuture,
-      final NettyMessagingService messagingService,
+      final ManagedMessagingService messagingService,
       final Throwable error) {
     if (error != null) {
       startupFuture.completeExceptionally(error);
