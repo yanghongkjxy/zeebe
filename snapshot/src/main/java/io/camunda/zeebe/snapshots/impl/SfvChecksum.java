@@ -161,9 +161,5 @@ final class SfvChecksum {
       return new UnsupportedOperationException("This is an immutable checksum.");
     }
 
-    @Override
-    public int hashCode() {
-      return Objects.hash(crc);
-    }
   }
 }
