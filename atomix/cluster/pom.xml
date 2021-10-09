@@ -146,11 +146,6 @@
 
     <dependency>
       <groupId>io.grpc</groupId>
-      <artifactId>grpc-core</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.grpc</groupId>
       <artifactId>grpc-api</artifactId>
     </dependency>
 
@@ -303,6 +298,11 @@
             <!-- dependency used but plugin seems to report a false positive here -->
             <dependency>uk.co.real-logic:sbe-tool</dependency>
             <dependency>net.jqwik:jqwik</dependency>
+            <!--
+              used by the gRPC generated code - not sure why it doesn't detect it, but I assume
+              it's because it's generated code?
+              -->
+            <dependency>javax.annotation:javax.annotation-api</dependency>
           </usedDependencies>
         </configuration>
       </plugin>
