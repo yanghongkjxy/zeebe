@@ -124,6 +124,8 @@ public class StandaloneGateway
         .withMemberId(config.getMemberId())
         .withAddress(Address.from(config.getHost(), config.getPort()))
         .withClusterId(config.getClusterName())
+        .withMessagingInterface(config.getHost())
+        .withMessagingPort(config.getPort())
         .withMembershipProvider(
             BootstrapDiscoveryProvider.builder()
                 .withNodes(Address.from(config.getContactPoint()))
