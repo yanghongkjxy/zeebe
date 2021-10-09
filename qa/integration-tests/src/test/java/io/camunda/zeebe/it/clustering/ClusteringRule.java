@@ -21,8 +21,8 @@ import io.atomix.cluster.AtomixClusterBuilder;
 import io.atomix.cluster.ClusterConfig;
 import io.atomix.cluster.MemberId;
 import io.atomix.cluster.discovery.BootstrapDiscoveryProvider;
-import io.atomix.cluster.messaging.impl.NettyMessagingService;
-import io.atomix.cluster.messaging.impl.NettyUnicastService;
+import io.atomix.cluster.messaging.ManagedMessagingService;
+import io.atomix.cluster.messaging.ManagedUnicastService;
 import io.atomix.cluster.protocol.SwimMembershipProtocol;
 import io.atomix.raft.partition.RaftPartition;
 import io.atomix.utils.net.Address;
@@ -383,6 +383,8 @@ public final class ClusteringRule extends ExternalResource {
             .withMemberId(clusterCfg.getMemberId())
             .withAddress(Address.from(clusterCfg.getHost(), clusterCfg.getPort()))
             .withClusterId(clusterCfg.getClusterName())
+            .withMessagingInterface(clusterCfg.getHost())
+            .withMessagingPort(clusterCfg.getPort())
             .withMembershipProvider(
                 BootstrapDiscoveryProvider.builder()
                     .withNodes(Address.from(clusterCfg.getContactPoint()))
@@ -620,15 +622,15 @@ public final class ClusteringRule extends ExternalResource {
   public void disconnect(final Broker broker) {
     final var atomix = broker.getBrokerContext().getAtomixCluster();
 
-    ((NettyUnicastService) atomix.getUnicastService()).stop().join();
-    ((NettyMessagingService) atomix.getMessagingService()).stop().join();
+    ((ManagedUnicastService) atomix.getUnicastService()).stop().join();
+    ((ManagedMessagingService) atomix.getMessagingService()).stop().join();
   }
 
   public void connect(final Broker broker) {
     final var atomix = broker.getBrokerContext().getAtomixCluster();
 
-    ((NettyUnicastService) atomix.getUnicastService()).start().join();
-    ((NettyMessagingService) atomix.getMessagingService()).start().join();
+    ((ManagedUnicastService) atomix.getUnicastService()).start().join();
+    ((ManagedMessagingService) atomix.getMessagingService()).start().join();
   }
 
   public void stopBrokerAndAwaitNewLeader(final int nodeId) {
