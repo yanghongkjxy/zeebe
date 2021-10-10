@@ -25,17 +25,37 @@ public class MessagingException extends IOException {
     super(message);
   }
 
+  public MessagingException(final String message, final Throwable cause) {
+    super(message, cause);
+  }
+
   /** Exception indicating no remote registered remote handler. */
   public static class NoRemoteHandler extends MessagingException {
     public NoRemoteHandler() {
-      super("No remote message handler registered for this message");
+      this("No remote message handler registered for this message");
+    }
+
+    public NoRemoteHandler(final String message) {
+      super(message);
+    }
+
+    public NoRemoteHandler(final String message, final Throwable cause) {
+      super(message, cause);
     }
   }
 
   /** Exception indicating handler failure. */
   public static class RemoteHandlerFailure extends MessagingException {
     public RemoteHandlerFailure() {
-      super("Remote handler failed to handle message");
+      this("Remote handler failed to handle message");
+    }
+
+    public RemoteHandlerFailure(final String message) {
+      super(message);
+    }
+
+    public RemoteHandlerFailure(final String message, final Throwable cause) {
+      super(message, cause);
     }
   }
 
