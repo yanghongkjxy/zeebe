@@ -62,6 +62,10 @@ public final class AtomixClusterFactory {
             .withMembershipProtocol(membershipProtocol)
             .withMessagingInterface(networkCfg.getInternalApi().getHost())
             .withMessagingPort(networkCfg.getInternalApi().getPort())
+            // TODO: use configured size instead of hard coded 128MB; we currently set that because
+            //       snapshot files might be up to 64MB (or slightly more), but later we should be
+            //       streaming snapshot file chunks instead
+            .withMaxMessageSize(128 * 1024 * 1024L)
             .withAddress(
                 Address.from(
                     networkCfg.getInternalApi().getAdvertisedHost(),

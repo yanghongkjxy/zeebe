@@ -39,9 +39,11 @@ final class CommandApiServiceStep extends AbstractBrokerStartupStep {
     final var brokerCfg = brokerStartupContext.getBrokerConfiguration();
 
     final var socketCfg = brokerCfg.getNetwork().getCommandApi();
-    final var messagingConfig = new MessagingConfig();
-    messagingConfig.setInterfaces(List.of(socketCfg.getHost()));
-    messagingConfig.setPort(socketCfg.getPort());
+    final var messagingConfig =
+        new MessagingConfig()
+            .setInterfaces(List.of(socketCfg.getHost()))
+            .setPort(socketCfg.getPort())
+            .setMaxMessageSize(brokerCfg.getNetwork().getMaxMessageSizeInBytes());
     final ManagedMessagingService messagingService =
         GrpcMessagingFactory.create(
                 messagingConfig,
