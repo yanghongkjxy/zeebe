@@ -37,6 +37,7 @@ import org.agrona.CloseHelper;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.ContainerState;
 import org.testcontainers.containers.Network;
@@ -48,6 +49,7 @@ import org.testcontainers.containers.Network;
  * <p>The important part is that we should be aware whether or not rolling update is possible
  * between versions.
  */
+@Disabled("Disabled as switching to gRPC breaks network-level compatibility between versions")
 final class RollingUpdateTest {
 
   public static final String TEST_IMAGE_TAG = "current-test";
