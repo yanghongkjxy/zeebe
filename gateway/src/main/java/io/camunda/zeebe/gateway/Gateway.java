@@ -10,7 +10,9 @@ package io.camunda.zeebe.gateway;
 import io.atomix.cluster.ClusterMembershipService;
 import io.atomix.cluster.messaging.ClusterEventService;
 import io.atomix.cluster.messaging.MessagingService;
+import io.camunda.zeebe.gateway.health.GatewayHealthManager;
 import io.camunda.zeebe.gateway.health.Status;
+import io.camunda.zeebe.gateway.health.impl.GatewayHealthManagerImpl;
 import io.camunda.zeebe.gateway.impl.broker.BrokerClient;
 import io.camunda.zeebe.gateway.impl.broker.BrokerClientImpl;
 import io.camunda.zeebe.gateway.impl.configuration.GatewayCfg;
@@ -22,7 +24,6 @@ import io.camunda.zeebe.gateway.impl.job.RoundRobinActivateJobsHandler;
 import io.camunda.zeebe.gateway.interceptors.impl.ContextInjectingInterceptor;
 import io.camunda.zeebe.gateway.interceptors.impl.DecoratedInterceptor;
 import io.camunda.zeebe.gateway.interceptors.impl.InterceptorRepository;
-import io.camunda.zeebe.gateway.protocol.GatewayGrpc;
 import io.camunda.zeebe.gateway.query.impl.QueryApiImpl;
 import io.camunda.zeebe.util.sched.ActorSchedulingService;
 import io.grpc.BindableService;
@@ -31,9 +32,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
-import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
 import io.grpc.netty.NettyServerBuilder;
-import io.grpc.protobuf.services.HealthStatusManager;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -54,16 +53,14 @@ public final class Gateway {
   private static final MonitoringServerInterceptor MONITORING_SERVER_INTERCEPTOR =
       MonitoringServerInterceptor.create(Configuration.allMetrics());
 
-  private final HealthStatusManager healthStatusManager = new HealthStatusManager();
   private final Function<GatewayCfg, ServerBuilder> serverBuilderFactory;
   private final Function<GatewayCfg, BrokerClient> brokerClientFactory;
   private final GatewayCfg gatewayCfg;
   private final ActorSchedulingService actorSchedulingService;
+  private final GatewayHealthManager healthManager;
 
   private Server server;
   private BrokerClient brokerClient;
-
-  private volatile Status status;
 
   public Gateway(
       final GatewayCfg gatewayCfg,
@@ -94,7 +91,8 @@ public final class Gateway {
     this.brokerClientFactory = brokerClientFactory;
     this.serverBuilderFactory = serverBuilderFactory;
     this.actorSchedulingService = actorSchedulingService;
-    this.setStatus(Status.INITIAL);
+
+    this.healthManager = new GatewayHealthManagerImpl();
   }
 
   public GatewayCfg getGatewayCfg() {
@@ -102,28 +100,7 @@ public final class Gateway {
   }
 
   public Status getStatus() {
-    return status;
-  }
-
-  public void setStatus(final Status status) {
-    this.status = status;
-    updateGrpcHealthStatus(status);
-  }
-
-  private void updateGrpcHealthStatus(final Status status) {
-    if (status == Status.INITIAL || status == Status.STARTING) {
-      setGrpcHealthStatus(ServingStatus.NOT_SERVING);
-    } else if (status == Status.SHUTDOWN) {
-      healthStatusManager.clearStatus(GatewayGrpc.SERVICE_NAME);
-      healthStatusManager.clearStatus(HealthStatusManager.SERVICE_NAME_ALL_SERVICES);
-    } else if (status == Status.RUNNING) {
-      setGrpcHealthStatus(ServingStatus.SERVING);
-    }
-  }
-
-  private void setGrpcHealthStatus(final ServingStatus servingStatus) {
-    healthStatusManager.setStatus(GatewayGrpc.SERVICE_NAME, servingStatus);
-    healthStatusManager.setStatus(HealthStatusManager.SERVICE_NAME_ALL_SERVICES, servingStatus);
+    return healthManager.getStatus();
   }
 
   public BrokerClient getBrokerClient() {
@@ -131,7 +108,7 @@ public final class Gateway {
   }
 
   public void start() throws IOException {
-    setStatus(Status.STARTING);
+    healthManager.setStatus(Status.STARTING);
     brokerClient = buildBrokerClient();
 
     final ActivateJobsHandler activateJobsHandler;
@@ -162,14 +139,13 @@ public final class Gateway {
       setSecurityConfig(serverBuilder, securityCfg);
     }
 
-    final BindableService healthService = healthStatusManager.getHealthService();
     server =
         serverBuilder
             .addService(applyInterceptors(gatewayGrpcService))
-            .addService(healthService)
+            .addService(applyInterceptors(healthManager.getHealthService()))
             .build();
     server.start();
-    setStatus(Status.RUNNING);
+    healthManager.setStatus(Status.RUNNING);
   }
 
   private static NettyServerBuilder setNetworkConfig(final NetworkCfg cfg) {
@@ -225,7 +201,7 @@ public final class Gateway {
     return LongPollingActivateJobsHandler.newBuilder().setBrokerClient(brokerClient).build();
   }
 
-  private ServerServiceDefinition applyInterceptors(final GatewayGrpcService service) {
+  private ServerServiceDefinition applyInterceptors(final BindableService service) {
     final var repository = new InterceptorRepository().load(gatewayCfg.getInterceptors());
     final var queryApi = new QueryApiImpl(brokerClient);
     final List<ServerInterceptor> interceptors =
@@ -242,7 +218,8 @@ public final class Gateway {
   }
 
   public void stop() {
-    setStatus(Status.SHUTDOWN);
+    healthManager.setStatus(Status.SHUTDOWN);
+
     if (server != null && !server.isShutdown()) {
       server.shutdownNow();
       try {
