@@ -1,3 +1,10 @@
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.1. You may not use this file
+ * except in compliance with the Zeebe Community License 1.1.
+ */
 package io.camunda.zeebe.snapshots.impl;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -84,14 +91,14 @@ final class SfvChecksum {
     for (String line : lines) {
       line = line.trim();
       if (line.startsWith(";")) {
-        Matcher matcher = COMBINED_VALUE_PATTERN.matcher(line);
+        final Matcher matcher = COMBINED_VALUE_PATTERN.matcher(line);
         if (matcher.find()) {
           final String hexString = matcher.group(1);
           final long crc = Long.parseLong(hexString, 16);
           combinedChecksum = new PreDefinedImmutableChecksum(crc);
         }
       } else {
-        Matcher matcher = FILE_CRC_PATTERN.matcher(line);
+        final Matcher matcher = FILE_CRC_PATTERN.matcher(line);
         if (matcher.find()) {
           final Long crc = Long.parseLong(matcher.group(2), 16);
           final String fileName = matcher.group(1).trim();
@@ -117,6 +124,8 @@ final class SfvChecksum {
     }
     writer.write(COMBINED_VALUE_PREFIX);
     writer.write(Long.toHexString(combinedChecksum.getValue()));
+    writer.newLine();
+    writer.write("; number of files used for combined value = " + checksums.size());
     writer.newLine();
     for (Entry<String, Long> entry : checksums.entrySet()) {
       writer.write(entry.getKey());
@@ -159,6 +168,5 @@ final class SfvChecksum {
     private static UnsupportedOperationException getUnsupportedOperationException() {
       return new UnsupportedOperationException("This is an immutable checksum.");
     }
-
   }
 }

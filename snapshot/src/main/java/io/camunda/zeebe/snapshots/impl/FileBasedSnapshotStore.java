@@ -464,7 +464,8 @@ public final class FileBasedSnapshotStore extends Actor
       actualChecksum = SnapshotChecksum.calculate(destination);
       if (actualChecksum.getCombinedValue() != expectedChecksum) {
         rollbackPartialSnapshot(destination);
-        throw new InvalidSnapshotChecksum(directory, expectedChecksum, actualChecksum.getCombinedValue());
+        throw new InvalidSnapshotChecksum(
+            directory, expectedChecksum, actualChecksum.getCombinedValue());
       }
 
       SnapshotChecksum.persist(checksumPath, actualChecksum);
@@ -474,7 +475,8 @@ public final class FileBasedSnapshotStore extends Actor
     }
 
     final var newPersistedSnapshot =
-        new FileBasedSnapshot(destination, checksumPath, actualChecksum.getCombinedValue(), metadata);
+        new FileBasedSnapshot(
+            destination, checksumPath, actualChecksum.getCombinedValue(), metadata);
     final var failed =
         !currentPersistedSnapshotRef.compareAndSet(currentPersistedSnapshot, newPersistedSnapshot);
     if (failed) {

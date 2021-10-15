@@ -10,7 +10,6 @@ package io.camunda.zeebe.snapshots.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
@@ -173,5 +172,22 @@ public class SnapshotChecksumTest {
 
     // then
     assertThat(combinedValue).isEqualTo(expectedChecksum);
+  }
+
+  @Test
+  public void shouldWriteTheNumberOfFiles() throws IOException {
+    // given
+    final var folder = temporaryFolder.newFolder().toPath();
+    createChunk(folder, "file1.txt");
+    createChunk(folder, "file2.txt");
+    createChunk(folder, "file3.txt");
+    final SfvChecksum sfvChecksum = SnapshotChecksum.calculate(folder);
+
+    // when
+    final String serialized =
+        new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
+
+    // then
+    assertThat(serialized).contains("; number of files used for combined value = 3");
   }
 }

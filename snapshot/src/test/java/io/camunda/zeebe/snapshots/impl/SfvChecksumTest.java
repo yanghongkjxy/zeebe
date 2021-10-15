@@ -1,3 +1,10 @@
+/*
+ * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH under
+ * one or more contributor license agreements. See the NOTICE file distributed
+ * with this work for additional information regarding copyright ownership.
+ * Licensed under the Zeebe Community License 1.1. You may not use this file
+ * except in compliance with the Zeebe Community License 1.1.
+ */
 package io.camunda.zeebe.snapshots.impl;
 
 import static io.camunda.zeebe.snapshots.impl.SnapshotChecksumTest.createChunk;
@@ -24,28 +31,34 @@ public class SfvChecksumTest {
 
   @Test
   public void shouldUseDefaultValueZeroWhenInitialized() {
+    // given
+    // when
+    // then
     assertThat(sfvChecksum.getCombinedValue()).isEqualTo(0);
   }
 
   @Test
   public void shouldReadCombinedValueFromComment() {
-    String[] sfvLines = {"; a simple comment to be ignored", "; combinedValue = bbaaccdd"};
+    // given
+    final String[] sfvLines = {"; a simple comment to be ignored", "; combinedValue = bbaaccdd"};
 
+    // when
     sfvChecksum.updateFromSfvFile(sfvLines);
 
+    // then
     assertThat(sfvChecksum.getCombinedValue()).isEqualTo(0xbbaaccddL);
   }
 
   @Test
   public void shouldReadAndWriteSameValues() throws IOException {
-    String[] givenSfvLines = {"; combinedValue = 12345678", "file1   aabbccdd"};
-
-    // setup
+    // given
+    final String[] givenSfvLines = {"; combinedValue = 12345678", "file1   aabbccdd"};
     sfvChecksum.updateFromSfvFile(givenSfvLines);
-    String serialized = new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
+    final String serialized =
+        new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
 
     // when
-    String[] actualSfVlines = serialized.split(System.lineSeparator());
+    final String[] actualSfVlines = serialized.split(System.lineSeparator());
 
     // then
     assertThat(actualSfVlines).contains(givenSfvLines[0]);
@@ -54,17 +67,26 @@ public class SfvChecksumTest {
 
   @Test
   public void shouldWriteSnapshotDirectoryCommentIfPresent() throws IOException {
+    // given
     sfvChecksum.setSnapshotDirectoryComment("/foo/bar");
 
-    String serialized = new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
+    // when
+    final String serialized =
+        new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
 
+    // then
     assertThat(serialized).contains("; snapshot directory = /foo/bar");
   }
 
   @Test
   public void shouldContainHumanReadableInstructions() throws IOException {
-    String serialized = new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
+    // given
 
+    // when
+    final String serialized =
+        new String(sfvChecksum.serializeSfvFileData(), StandardCharsets.UTF_8);
+
+    // then
     assertThat(serialized)
         .contains("; This is an SFC checksum file for all files in the given directory.");
     assertThat(serialized)
@@ -75,14 +97,14 @@ public class SfvChecksumTest {
 
   @Test
   public void shouldThrowExceptionWhenUsingPreDefinedChecksumFromSfv() throws IOException {
-    // setup
-    var folder = temporaryFolder.newFolder().toPath();
+    // given
+    final var folder = temporaryFolder.newFolder().toPath();
     createChunk(folder, "file1.txt");
 
-    // given
+    // when
     sfvChecksum.updateFromSfvFile("; combinedValue = 12341234");
 
-    // when
+    // then
     assertThatThrownBy(() -> sfvChecksum.updateFromFile(folder))
         .isInstanceOf(UnsupportedOperationException.class);
   }

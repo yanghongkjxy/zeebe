@@ -38,7 +38,8 @@ final class SnapshotChecksum {
 
   public static SfvChecksum calculate(final Path snapshotDirectory) throws IOException {
     try (final var fileStream = Files.list(snapshotDirectory).sorted()) {
-      SfvChecksum sfvChecksum = createCombinedChecksum(fileStream.collect(Collectors.toList()));
+      final SfvChecksum sfvChecksum =
+          createCombinedChecksum(fileStream.collect(Collectors.toList()));
       sfvChecksum.setSnapshotDirectoryComment(snapshotDirectory.toString());
       return sfvChecksum;
     }
