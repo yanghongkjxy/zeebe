@@ -37,7 +37,7 @@ public class SfvChecksumTest {
   }
 
   @Test
-  public void shouldBePossibleToMakeRoundtrip_ReadAndWrite() throws IOException {
+  public void shouldReadAndWriteSameValues() throws IOException {
     String[] givenSfvLines = {"; combinedValue = 12345678", "file1   aabbccdd"};
 
     // setup
