@@ -159,7 +159,7 @@ public class SnapshotChecksumTest {
 
   @Test
   public void mustBeAbleToReadFormerSimpleChecksumFile() throws IOException {
-    // setup
+    // given
     final Path temp = temporaryFolder.newFolder().toPath();
     final File tempFile = new File(temp.toFile(), "checksum");
     final long expectedChecksum = 0xccaaffeeL;
