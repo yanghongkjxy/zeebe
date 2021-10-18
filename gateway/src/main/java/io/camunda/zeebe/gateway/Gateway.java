@@ -125,15 +125,6 @@ public final class Gateway {
     final GatewayGrpcService gatewayGrpcService = new GatewayGrpcService(endpointManager);
     final ServerBuilder<?> serverBuilder = serverBuilderFactory.apply(gatewayCfg);
 
-    if (gatewayCfg.getMonitoring().isEnabled()) {
-      final MonitoringServerInterceptor monitoringInterceptor =
-          MonitoringServerInterceptor.create(Configuration.allMetrics());
-      serverBuilder.addService(
-          ServerInterceptors.intercept(gatewayGrpcService, monitoringInterceptor));
-    } else {
-      serverBuilder.addService(gatewayGrpcService);
-    }
-
     final SecurityCfg securityCfg = gatewayCfg.getSecurity();
     if (securityCfg.isEnabled()) {
       setSecurityConfig(serverBuilder, securityCfg);
