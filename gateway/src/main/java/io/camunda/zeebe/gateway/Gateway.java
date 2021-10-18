@@ -133,7 +133,9 @@ public final class Gateway {
     server =
         serverBuilder
             .addService(applyInterceptors(gatewayGrpcService))
-            .addService(applyInterceptors(healthManager.getHealthService()))
+            .addService(
+                ServerInterceptors.intercept(
+                    healthManager.getHealthService(), MONITORING_SERVER_INTERCEPTOR))
             .build();
     server.start();
     healthManager.setStatus(Status.RUNNING);
