@@ -21,7 +21,7 @@ import io.grpc.protobuf.services.HealthStatusManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class GatewayHealthManagerImplTest {
+final class GatewayHealthManagerImplTest {
   private GatewayHealthManagerImpl gatewayHealthManagerImpl;
   private HealthStatusManager statusManager;
 
