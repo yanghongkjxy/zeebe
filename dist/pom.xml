@@ -169,6 +169,21 @@
       <artifactId>zeebe-test-util</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.69</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.69</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -266,6 +281,9 @@
             <dependency>org.springframework.boot:spring-boot-starter-web</dependency>
             <dependency>io.micrometer:micrometer-core</dependency>
             <dependency>io.micrometer:micrometer-registry-prometheus</dependency>
+
+            <dependency>org.bouncycastle:bcpkix-jdk15on</dependency>
+            <dependency>org.bouncycastle:bcprov-jdk15on</dependency>
           </usedDependencies>
         </configuration>
       </plugin>
