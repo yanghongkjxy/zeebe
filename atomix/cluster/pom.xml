@@ -206,13 +206,11 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk15on</artifactId>
-      <version>1.69</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.69</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -280,8 +278,6 @@
             <dependency>uk.co.real-logic:sbe-tool</dependency>
             <dependency>net.jqwik:jqwik</dependency>
             <dependency>io.netty:netty-tcnative-boringssl-static</dependency>
-            <dependency>org.bouncycastle:bcpkix-jdk15on</dependency>
-            <dependency>org.bouncycastle:bcprov-jdk15on</dependency>
           </usedDependencies>
         </configuration>
       </plugin>

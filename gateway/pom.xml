@@ -269,14 +269,12 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk15on</artifactId>
-      <version>1.69</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.69</version>
       <scope>test</scope>
     </dependency>
 
@@ -292,10 +290,6 @@
           <ignoredDependencies>
             <ignoredDependency>io.netty:netty-tcnative-boringssl-static</ignoredDependency>
           </ignoredDependencies>
-          <usedDependencies>
-            <dependency>org.bouncycastle:bcpkix-jdk15on</dependency>
-            <dependency>org.bouncycastle:bcprov-jdk15on</dependency>
-          </usedDependencies>
         </configuration>
       </plugin>
     </plugins>
